@@ -657,102 +657,12 @@ async def send_dingtalk(html_content: str):
         params['timestamp'] = sign_data['timestamp']
         params['sign'] = sign_data['sign']
     
-    # 钉钉 Markdown 消息格式
-    markdown_text = f"""### {current_year}年{current_month}月电信监控报告
-
-#### 📱 套餐用量"""
-    
-    # 添加套餐用量数据
-    total_exchange = sum(u["exchange"] for u in USER_AMOUNT_INFO.values())
-    total_prize = sum(u["prize"] for u in USER_AMOUNT_INFO.values())
-    total_rights = sum(u["rights"] for u in USER_AMOUNT_INFO.values())
-    total_month = total_exchange + total_prize + total_rights
-    total_today = TODAY_AMOUNT_INFO["exchange"] + TODAY_AMOUNT_INFO["prize"] + TODAY_AMOUNT_INFO["rights"]
-    
-    # 提取 HTML 中的表格数据转为 Markdown
-    from html.parser import HTMLParser
-    
-    class TableParser(HTMLParser):
-        def __init__(self):
-            super().__init__()
-            self.in_table = False
-            self.in_row = False
-            self.in_cell = False
-            self.rows = []
-            self.current_row = []
-            self.current_cell = ""
-            self.headers = []
-            self.first_row = True
-            
-        def handle_starttag(self, tag, attrs):
-            if tag == 'table':
-                self.in_table = True
-            elif tag == 'tr' and self.in_table:
-                self.in_row = True
-                self.current_row = []
-            elif tag in ['td', 'th'] and self.in_row:
-                self.in_cell = True
-                self.current_cell = ""
-                
-        def handle_endtag(self, tag):
-            if tag == 'table':
-                self.in_table = False
-            elif tag == 'tr' and self.in_table:
-                self.in_row = False
-                if self.first_row:
-                    self.headers = self.current_row
-                    self.first_row = False
-                else:
-                    self.rows.append(self.current_row)
-            elif tag in ['td', 'th'] and self.in_row:
-                self.in_cell = False
-                self.current_row.append(self.current_cell.strip())
-                
-        def handle_data(self, data):
-            if self.in_cell:
-                self.current_cell += data
-    
-    # 解析 HTML 提取表格数据
-    parser = TableParser()
-    parser.feed(html_content)
-    
-    # 生成 Markdown 表格
-    if parser.headers:
-        markdown_text += "\n\n|" + "|".join(parser.headers) + "|\n"
-        markdown_text += "|" + "|".join(["---"] * len(parser.headers)) + "|\n"
-        for row in parser.rows[:10]:  # 限制显示前10行
-            markdown_text += "|" + "|".join(row) + "|\n"
-    
-    # 添加福利统计
-    markdown_text += f"""
-#### 📊 今日统计
-- 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元
-- 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元  
-- 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元
-- **今日总计: {total_today:.1f}元**
-
-#### 🎁 本月累计
-- 金豆兑换: {total_exchange:.1f}元
-- 各种抽奖: {total_prize:.1f}元
-- 等级权益: {total_rights:.1f}元
-- **本月总计: {total_month:.1f}元**
-
-#### 📅 本月中奖明细
-"""
-    # 添加中奖记录
-    if MONTH_WINNING_RECORDS:
-        for r in sorted(MONTH_WINNING_RECORDS, key=lambda x: x['time'])[:15]:  # 限制显示前15条
-            mask = f"{r['phone'][:3]}****{r['phone'][-4:]}"
-            markdown_text += f"- {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
-    else:
-        markdown_text += "本月暂无中奖记录\n"
-    
     # 构建请求数据
     data = {
-        "msgtype": "markdown",
-        "markdown": {
+        "msgtype": "richText",
+        "richText": {
             "title": f"{current_year}年{current_month}月电信报告",
-            "text": markdown_text
+            "text": html_content
         }
     }
     
