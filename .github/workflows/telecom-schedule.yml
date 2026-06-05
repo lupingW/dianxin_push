@@ -1,0 +1,40 @@
+name: 电信套餐和福利查询
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # 每天9:00运行 (UTC时间)
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  run-telecom-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 安装依赖
+        run: |
+          pip install aiohttp pycryptodome PyExecJS python-dateutil requests
+
+      - name: 运行电信套餐查询脚本
+        env:
+          CHINATELECOM_ACCOUNT: ${{ secrets.CHINATELECOM_ACCOUNT }}
+          WXPUSHER_APP_TOKEN: ${{ secrets.WXPUSHER_APP_TOKEN }}
+          WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
+          WXPUSHER_TOPIC_ID: ${{ secrets.WXPUSHER_TOPIC_ID }}
+          ENABLE_RUISHU: ${{ secrets.ENABLE_RUISHU }}
+        run: |
+          python "电信套餐和福利查询.py"
+
+      - name: 上传日志文件（如果存在）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: telecom-logs
+          path: telecom_script.log
+          retention-days: 7
