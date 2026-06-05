@@ -10,7 +10,7 @@
 可选：DINGTALK_WEBHOOK, DINGTALK_SECRET, ENABLE_RUISHU
 """
 
-import os, sys, json, re, base64, random, ssl, calendar, logging, hmac, hashlib, time
+import os, sys, json, re, base64, random, ssl, calendar, logging, hmac, hashlib, time, urllib.parse
 from datetime import datetime, date
 from collections import defaultdict
 try:
@@ -645,7 +645,6 @@ async def send_dingtalk(html_content: str):
     if not DINGTALK_WEBHOOK:
         print("⚠️ 未配置钉钉机器人 Webhook，跳过钉钉推送")
         return
-    import urllib.parse
     import requests
     
     # 构建 URL
