@@ -24,9 +24,8 @@ jobs:
       - name: 运行电信套餐查询脚本
         env:
           CHINATELECOM_ACCOUNT: ${{ secrets.CHINATELECOM_ACCOUNT }}
-          WXPUSHER_APP_TOKEN: ${{ secrets.WXPUSHER_APP_TOKEN }}
-          WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
-          WXPUSHER_TOPIC_ID: ${{ secrets.WXPUSHER_TOPIC_ID }}
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+          DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
           ENABLE_RUISHU: ${{ secrets.ENABLE_RUISHU }}
         run: |
           python "电信套餐和福利查询.py"

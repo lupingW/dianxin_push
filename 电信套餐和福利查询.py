@@ -7,10 +7,10 @@
   2. 统计金豆兑换、等级权益、抽奖所得话费
   3. 生成 HTML 报告，通过 WxPusher / 青龙通知推送（含套餐详细内容）
 环境变量：CHINATELECOM_ACCOUNT  格式：手机号#密码 (多账号用 & 或换行隔开)
-可选：WXPUSHER_APP_TOKEN, WXPUSHER_UID, WXPUSHER_TOPIC_ID, ENABLE_RUISHU
+可选：DINGTALK_WEBHOOK, DINGTALK_SECRET, ENABLE_RUISHU
 """
 
-import os, sys, json, re, base64, random, ssl, calendar, logging
+import os, sys, json, re, base64, random, ssl, calendar, logging, hmac, hashlib, time
 from datetime import datetime, date
 from collections import defaultdict
 try:
@@ -45,9 +45,8 @@ logging.basicConfig(filename='telecom_script.log', level=logging.ERROR,
 
 CHINATELECOM_ACCOUNT = os.environ.get('CHINATELECOM_ACCOUNT', '')
 
-WXPUSHER_APP_TOKEN = os.environ.get('WXPUSHER_APP_TOKEN', '')
-WXPUSHER_UID = os.environ.get('WXPUSHER_UID', '')
-WXPUSHER_TOPIC_ID = os.environ.get('WXPUSHER_TOPIC_ID', '')
+DINGTALK_WEBHOOK = os.environ.get('DINGTALK_WEBHOOK', '')
+DINGTALK_SECRET = os.environ.get('DINGTALK_SECRET', '')
 
 ENABLE_RUISHU = os.environ.get('ENABLE_RUISHU', 'true').lower() == 'true'
 
@@ -629,30 +628,148 @@ def generate_html_report(usage_summaries: list) -> str:
 """
     return html.replace('\n', '')
 
-async def send_wxpusher(html_content: str):
-    if not WXPUSHER_APP_TOKEN:
-        print("⚠️ 未配置 WxPusher 推送变量，跳过 WxPusher 推送")
-        return
-    import requests
-    url = "https://wxpusher.zjiecode.com/api/send/message"
-    data = {
-        "appToken": WXPUSHER_APP_TOKEN,
-        "content": html_content,
-        "contentType": 1,
-        "summary": f"{current_year}年{current_month}月电信报告"
+def generate_dingtalk_sign(secret: str) -> dict:
+    """生成钉钉机器人签名"""
+    timestamp = str(round(time.time() * 1000))
+    secret_enc = secret.encode('utf-8')
+    string_to_sign = f'{timestamp}\n{secret}'
+    string_to_sign_enc = string_to_sign.encode('utf-8')
+    hmac_code = hmac.new(secret_enc, string_to_sign_enc, digestmod=hashlib.sha256).digest()
+    sign = urllib.parse.quote(base64.b64encode(hmac_code))
+    return {
+        'timestamp': timestamp,
+        'sign': sign
     }
-    if WXPUSHER_TOPIC_ID:
-        data["topicIds"] = [WXPUSHER_TOPIC_ID]
-    elif WXPUSHER_UID:
-        data["uids"] = [WXPUSHER_UID]
-    else:
-        print("⚠️ WxPusher 缺少推送目标 (UID或Topic ID)，跳过推送")
+
+async def send_dingtalk(html_content: str):
+    if not DINGTALK_WEBHOOK:
+        print("⚠️ 未配置钉钉机器人 Webhook，跳过钉钉推送")
         return
+    import urllib.parse
+    import requests
+    
+    # 构建 URL
+    url = DINGTALK_WEBHOOK
+    params = {}
+    
+    # 如果配置了密钥，添加签名
+    if DINGTALK_SECRET:
+        sign_data = generate_dingtalk_sign(DINGTALK_SECRET)
+        params['timestamp'] = sign_data['timestamp']
+        params['sign'] = sign_data['sign']
+    
+    # 钉钉 Markdown 消息格式
+    markdown_text = f"""### {current_year}年{current_month}月电信监控报告
+
+#### 📱 套餐用量"""
+    
+    # 添加套餐用量数据
+    total_exchange = sum(u["exchange"] for u in USER_AMOUNT_INFO.values())
+    total_prize = sum(u["prize"] for u in USER_AMOUNT_INFO.values())
+    total_rights = sum(u["rights"] for u in USER_AMOUNT_INFO.values())
+    total_month = total_exchange + total_prize + total_rights
+    total_today = TODAY_AMOUNT_INFO["exchange"] + TODAY_AMOUNT_INFO["prize"] + TODAY_AMOUNT_INFO["rights"]
+    
+    # 提取 HTML 中的表格数据转为 Markdown
+    from html.parser import HTMLParser
+    
+    class TableParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.in_table = False
+            self.in_row = False
+            self.in_cell = False
+            self.rows = []
+            self.current_row = []
+            self.current_cell = ""
+            self.headers = []
+            self.first_row = True
+            
+        def handle_starttag(self, tag, attrs):
+            if tag == 'table':
+                self.in_table = True
+            elif tag == 'tr' and self.in_table:
+                self.in_row = True
+                self.current_row = []
+            elif tag in ['td', 'th'] and self.in_row:
+                self.in_cell = True
+                self.current_cell = ""
+                
+        def handle_endtag(self, tag):
+            if tag == 'table':
+                self.in_table = False
+            elif tag == 'tr' and self.in_table:
+                self.in_row = False
+                if self.first_row:
+                    self.headers = self.current_row
+                    self.first_row = False
+                else:
+                    self.rows.append(self.current_row)
+            elif tag in ['td', 'th'] and self.in_row:
+                self.in_cell = False
+                self.current_row.append(self.current_cell.strip())
+                
+        def handle_data(self, data):
+            if self.in_cell:
+                self.current_cell += data
+    
+    # 解析 HTML 提取表格数据
+    parser = TableParser()
+    parser.feed(html_content)
+    
+    # 生成 Markdown 表格
+    if parser.headers:
+        markdown_text += "\n\n|" + "|".join(parser.headers) + "|\n"
+        markdown_text += "|" + "|".join(["---"] * len(parser.headers)) + "|\n"
+        for row in parser.rows[:10]:  # 限制显示前10行
+            markdown_text += "|" + "|".join(row) + "|\n"
+    
+    # 添加福利统计
+    markdown_text += f"""
+#### 📊 今日统计
+- 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元
+- 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元  
+- 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元
+- **今日总计: {total_today:.1f}元**
+
+#### 🎁 本月累计
+- 金豆兑换: {total_exchange:.1f}元
+- 各种抽奖: {total_prize:.1f}元
+- 等级权益: {total_rights:.1f}元
+- **本月总计: {total_month:.1f}元**
+
+#### 📅 本月中奖明细
+"""
+    # 添加中奖记录
+    if MONTH_WINNING_RECORDS:
+        for r in sorted(MONTH_WINNING_RECORDS, key=lambda x: x['time'])[:15]:  # 限制显示前15条
+            mask = f"{r['phone'][:3]}****{r['phone'][-4:]}"
+            markdown_text += f"- {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
+    else:
+        markdown_text += "本月暂无中奖记录\n"
+    
+    # 构建请求数据
+    data = {
+        "msgtype": "markdown",
+        "markdown": {
+            "title": f"{current_year}年{current_month}月电信报告",
+            "text": markdown_text
+        }
+    }
+    
     try:
-        requests.post(url, headers={'Content-Type': 'application/json'}, json=data)
-        print("✅ WxPusher 推送成功")
+        if params:
+            response = requests.post(url, params=params, json=data, headers={'Content-Type': 'application/json'})
+        else:
+            response = requests.post(url, json=data, headers={'Content-Type': 'application/json'})
+        
+        result = response.json()
+        if result.get('errcode') == 0:
+            print("✅ 钉钉推送成功")
+        else:
+            print(f"⚠️ 钉钉推送失败: {result.get('errmsg')}")
     except Exception as e:
-        print(f"⚠️ WxPusher 推送失败: {e}")
+        print(f"⚠️ 钉钉推送异常: {e}")
 
 def qinglong_notify():
     if not all_accounts_msg:
@@ -820,7 +937,7 @@ async def main():
 
         print("\n📊 生成综合报告...")
         html = generate_html_report(usage_summaries)
-        await send_wxpusher(html)
+        await send_dingtalk(html)
         qinglong_notify()
 
 if __name__ == '__main__':
