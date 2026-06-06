@@ -641,7 +641,7 @@ def generate_dingtalk_sign(secret: str) -> dict:
         'sign': sign
     }
 
-async def send_dingtalk(html_content: str):
+async def send_dingtalk(usage_summaries: list):
     if not DINGTALK_WEBHOOK:
         print("⚠️ 未配置钉钉机器人 Webhook，跳过钉钉推送")
         return
@@ -657,12 +657,92 @@ async def send_dingtalk(html_content: str):
         params['timestamp'] = sign_data['timestamp']
         params['sign'] = sign_data['sign']
     
+    # 获取福利统计数据
+    total_exchange = sum(u["exchange"] for u in USER_AMOUNT_INFO.values())
+    total_prize = sum(u["prize"] for u in USER_AMOUNT_INFO.values())
+    total_rights = sum(u["rights"] for u in USER_AMOUNT_INFO.values())
+    total_month = total_exchange + total_prize + total_rights
+    total_today = TODAY_AMOUNT_INFO["exchange"] + TODAY_AMOUNT_INFO["prize"] + TODAY_AMOUNT_INFO["rights"]
+    
+    # 构建 Markdown 内容
+    markdown_text = f"# {current_year}年{current_month}月电信监控报告\n\n"
+    
+    # 添加每个账号的套餐用量
+    for s in usage_summaries:
+        mask = f"{s['phone'][:3]}****{s['phone'][-4:]}"
+        markdown_text += f"## {mask}\n\n"
+        
+        # 通话用量
+        voice_used = s['voiceUsage']
+        voice_total = s['voiceTotal']
+        markdown_text += f"通话:{voice_used}/{voice_total}min\n\n"
+        
+        # 总流量
+        markdown_text += "总流量\n\n"
+        
+        # 通用流量
+        common_used_mb = s['commonUse']
+        common_total_mb = s['commonTotal']
+        if common_total_mb > 0:
+            common_used_gb = common_used_mb / 1024
+            common_total_gb = common_total_mb / 1024
+            markdown_text += f"通用:{common_used_gb:.2f}/{common_total_gb:.2f}GB\n\n"
+        else:
+            markdown_text += f"通用:0/0.0GB\n\n"
+        
+        # 专用流量
+        special_used_mb = s['specialUse']
+        special_total_mb = s['specialTotal']
+        if special_total_mb > 0:
+            special_used_gb = special_used_mb / 1024
+            special_total_gb = special_total_mb / 1024
+            markdown_text += f"专用:{special_used_gb:.2f}/{special_total_gb:.2f}GB\n\n"
+        else:
+            markdown_text += f"专用:0/0.0GB\n\n"
+        
+        # 流量包明细
+        if s.get('fluxDetail'):
+            markdown_text += "[流量包明细]\n\n"
+            markdown_text += f"{s['fluxDetail']}\n\n"
+        
+        # 余额
+        balance = s['balance'] / 100
+        markdown_text += f"余额:{balance:.2f}元\n\n"
+        
+        markdown_text += "---\n\n"
+    
+    # 添加今日话费福利统计
+    markdown_text += "## 今日话费福利\n\n"
+    markdown_text += f"- 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元\n"
+    markdown_text += f"- 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元\n"
+    markdown_text += f"- 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元\n"
+    markdown_text += f"- **今日总计: {total_today:.1f}元**\n\n"
+    
+    # 添加本月累计统计
+    markdown_text += "## 本月累计话费福利\n\n"
+    markdown_text += f"- 金豆兑换: {total_exchange:.1f}元\n"
+    markdown_text += f"- 各种抽奖: {total_prize:.1f}元\n"
+    markdown_text += f"- 等级权益: {total_rights:.1f}元\n"
+    markdown_text += f"- **本月总计: {total_month:.1f}元**\n\n"
+    
+    # 添加本月中奖明细
+    markdown_text += "## 本月中奖明细\n\n"
+    if MONTH_WINNING_RECORDS:
+        for r in sorted(MONTH_WINNING_RECORDS, key=lambda x: x['time'])[:15]:
+            mask = f"{r['phone'][:3]}****{r['phone'][-4:]}"
+            markdown_text += f"- {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
+    else:
+        markdown_text += "本月暂无中奖记录\n"
+    
+    # 添加查询时间
+    markdown_text += f"\n查询时间:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+    
     # 构建请求数据
     data = {
-        "msgtype": "richText",
-        "richText": {
+        "msgtype": "markdown",
+        "markdown": {
             "title": f"{current_year}年{current_month}月电信报告",
-            "text": html_content
+            "text": markdown_text
         }
     }
     
@@ -846,7 +926,7 @@ async def main():
 
         print("\n📊 生成综合报告...")
         html = generate_html_report(usage_summaries)
-        await send_dingtalk(html)
+        await send_dingtalk(usage_summaries)
         qinglong_notify()
 
 if __name__ == '__main__':
