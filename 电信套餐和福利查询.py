@@ -682,8 +682,8 @@ async def send_dingtalk(usage_summaries: list):
         # 余额
         balance = s['balance'] / 100
         
-        usage_section += f"{mask}\n"
-        usage_section += f"通话:{voice_used}/{voice_total}分\n"
+        usage_section += f"{mask}\n\n"
+        usage_section += f"# 通话:{voice_used}/{voice_total}分\n"
         usage_section += f"# 总流量：\n"
         usage_section += f"* 通用：{common_used_gb:.1f}/{common_total_gb:.1f}GB\n"
         usage_section += f"* 专用：{special_used_gb:.1f}/{special_total_gb:.1f}GB\n"
