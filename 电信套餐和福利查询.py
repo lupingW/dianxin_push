@@ -684,11 +684,12 @@ async def send_dingtalk(usage_summaries: list):
         
         usage_section += f"{mask}\n\n"
         usage_section += f"# 通话:{voice_used}/{voice_total}分\n"
+        usage_section += f" --- \n"
         usage_section += f"# 总流量：\n"
         usage_section += f"* 通用：{common_used_gb:.1f}/{common_total_gb:.1f}GB\n"
         usage_section += f"* 专用：{special_used_gb:.1f}/{special_total_gb:.1f}GB\n"
         usage_section += f"* 总计：**{(common_used_gb + special_used_gb):.1f}/{(common_total_gb + special_total_gb):.1f}GB**\n"
-        
+        usage_section += f" --- \n"
         # 流量包明细
         if s.get('fluxDetail'):
             # 解析流量包明细
@@ -739,8 +740,9 @@ async def send_dingtalk(usage_summaries: list):
                             if pkg:
                                 usage_section += f"* {pkg}\n"
                         usage_section += "\n"
-        
+    usage_section += f" --- \n"
     usage_section += f"# 余额:{balance:.2f}元\n"
+    usage_section += f" --- \n"
     # 生成今日中奖记录
     today_winning_section = ""
     if TODAY_WINNING_RECORDS:
@@ -761,22 +763,22 @@ async def send_dingtalk(usage_summaries: list):
             month_winning_section += f"* {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
     else:
         month_winning_section = "* 本月暂无中奖记录\n"
-
+    usage_section += f" --- \n"
     usage_section += f"# 本月中奖明细\n"    
     usage_section += month_winning_section    
-
+    usage_section += f" --- \n"
     usage_section += f"# 今日话费福利\n"
     usage_section += f"* 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元\n"
     usage_section += f"* 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元\n"
     usage_section += f"* 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元\n"
     usage_section += f"* **今日总计: {total_today:.1f}元**\n"
-
+    usage_section += f" --- \n"
     usage_section += f"# 本月累计话费福利\n"
     usage_section += f"* 金豆兑换: {total_exchange:.1f}元\n"
     usage_section += f"* 各种抽奖: {total_prize:.1f}元\n"
     usage_section += f"* 等级权益: {total_rights:.1f}元\n"
     usage_section += f"* **本月总计: {total_month:.1f}元**\n"
-
+    usage_section += f" --- \n"
     usage_section += f"\n\n查询时间:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     
     # 构建请求数据
