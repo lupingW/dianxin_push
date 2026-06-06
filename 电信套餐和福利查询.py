@@ -714,10 +714,14 @@ async def send_dingtalk(usage_summaries: list):
                         
                         usage_section += f"### {title}："
                         
-                        # 提取每个流量包 [包名]用量信息
-                        packages = re.findall(r'\[([^\]]+)\]', content)
+                        # 提取每个流量包完整信息 [包名]用量信息
+                        # 使用正则匹配每个完整的流量包项
+                        import re
+                        packages = re.findall(r'\[[^\]]+\][^\[]*', content)
                         for pkg in packages:
-                            usage_section += f"* [{pkg}]\n\n"
+                            pkg = pkg.strip()
+                            if pkg:
+                                usage_section += f"* [{pkg}]"
                         usage_section += "\n"
                         
                 elif line.startswith('📺'):
@@ -729,13 +733,16 @@ async def send_dingtalk(usage_summaries: list):
                         
                         usage_section += f"### {title}："
                         
-                        # 提取每个流量包 [包名]用量信息
-                        packages = re.findall(r'\[([^\]]+)\]', content)
+                        # 提取每个流量包完整信息 [包名]用量信息
+                        import re
+                        packages = re.findall(r'\[[^\]]+\][^\[]*', content)
                         for pkg in packages:
-                            usage_section += f"* [{pkg}]"
+                            pkg = pkg.strip()
+                            if pkg:
+                                usage_section += f"* [{pkg}]"
                         usage_section += "\n"
         
-        usage_section += f"**余额:{balance:.2f}元**\n\n"
+    usage_section += f"# 余额:{balance:.2f}元"
     
     # 生成今日中奖记录
     today_winning_section = ""
