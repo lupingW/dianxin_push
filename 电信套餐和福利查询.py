@@ -716,7 +716,6 @@ async def send_dingtalk(usage_summaries: list):
                         
                         # 提取每个流量包完整信息 [包名]用量信息
                         # 使用正则匹配每个完整的流量包项
-                        import re
                         packages = re.findall(r'\[[^\]]+\][^\[]*', content)
                         for pkg in packages:
                             pkg = pkg.strip()
@@ -734,7 +733,6 @@ async def send_dingtalk(usage_summaries: list):
                         usage_section += f"# {title}\n"
                         
                         # 提取每个流量包完整信息 [包名]用量信息
-                        import re
                         packages = re.findall(r'\[[^\]]+\][^\[]*', content)
                         for pkg in packages:
                             pkg = pkg.strip()
@@ -769,18 +767,18 @@ async def send_dingtalk(usage_summaries: list):
     usage_section += month_winning_section    
     usage_section += f" --- \n"
     usage_section += f"# 今日话费福利\n"
-    usage_section += f"* 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元\n"
-    usage_section += f"* 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元\n"
-    usage_section += f"* 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元\n"
-    usage_section += f"* **今日总计: {total_today:.1f}元**\n"
+    usage_section += f"* 金豆兑换：{TODAY_AMOUNT_INFO['exchange']:.1f}元\n"
+    usage_section += f"* 各种抽奖：{TODAY_AMOUNT_INFO['prize']:.1f}元\n"
+    usage_section += f"* 等级权益：{TODAY_AMOUNT_INFO['rights']:.1f}元\n"
+    usage_section += f"* **今日总计：{total_today:.1f}元**\n"
     usage_section += f" --- \n"
     usage_section += f"# 本月累计话费福利\n"
-    usage_section += f"* 金豆兑换: {total_exchange:.1f}元\n"
-    usage_section += f"* 各种抽奖: {total_prize:.1f}元\n"
-    usage_section += f"* 等级权益: {total_rights:.1f}元\n"
-    usage_section += f"* **本月总计: {total_month:.1f}元**\n"
+    usage_section += f"* 金豆兑换：{total_exchange:.1f}元\n"
+    usage_section += f"* 各种抽奖：{total_prize:.1f}元\n"
+    usage_section += f"* 等级权益：{total_rights:.1f}元\n"
+    usage_section += f"* **本月总计：{total_month:.1f}元**\n"
     usage_section += f" --- \n"
-    usage_section += f"\n\n查询时间:{(datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')}"
+    usage_section += f"\n\n查询时间：{(datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')}"
     
     # 构建请求数据
     data = {
