@@ -854,7 +854,7 @@ async def process_user(session, phone, password):
                 lines = []
                 for p in packages:
                     icon = "🇨🇳" if "国内" in p["title"] else "📺" if "专用" in p["title"] else "🌎"
-                    line = f"* {icon}{p['title']}: "
+                    line = f"{icon}{p['title']}: "
                     for prod in p["productInfos"]:
                         if prod.get("infiniteTitle"):
                             line += f"[{prod['title']}]{prod['infiniteTitle']}{prod['infiniteValue']}{prod['infiniteUnit']}/无限 "
