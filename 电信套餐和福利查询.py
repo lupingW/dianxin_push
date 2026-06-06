@@ -741,7 +741,7 @@ async def send_dingtalk(usage_summaries: list):
                         usage_section += "\n"
         
     usage_section += f"# 余额:{balance:.2f}元\n"
-    
+    usage_section += s['fluxDetail']
     # 生成今日中奖记录
     today_winning_section = ""
     if TODAY_WINNING_RECORDS:
@@ -855,7 +855,7 @@ async def process_user(session, phone, password):
                 lines = []
                 for p in packages:
                     icon = "🇨🇳" if "国内" in p["title"] else "📺" if "专用" in p["title"] else "🌎"
-                    line = f"{icon}{p['title']}: "
+                    line = f"* {icon}{p['title']}: "
                     for prod in p["productInfos"]:
                         if prod.get("infiniteTitle"):
                             line += f"[{prod['title']}]{prod['infiniteTitle']}{prod['infiniteValue']}{prod['infiniteUnit']}/无限 "
