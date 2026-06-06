@@ -657,126 +657,118 @@ async def send_dingtalk(usage_summaries: list):
         params['timestamp'] = sign_data['timestamp']
         params['sign'] = sign_data['sign']
     
-    # 获取福利统计数据
+    # 计算统计数据
     total_exchange = sum(u["exchange"] for u in USER_AMOUNT_INFO.values())
     total_prize = sum(u["prize"] for u in USER_AMOUNT_INFO.values())
     total_rights = sum(u["rights"] for u in USER_AMOUNT_INFO.values())
     total_month = total_exchange + total_prize + total_rights
     total_today = TODAY_AMOUNT_INFO["exchange"] + TODAY_AMOUNT_INFO["prize"] + TODAY_AMOUNT_INFO["rights"]
     
-    # 构建 Markdown 内容
-    markdown_text = ""
-    
-    # 添加每个账号的套餐用量
+    # 生成套餐用量部分
+    usage_section = ""
     for s in usage_summaries:
         mask = f"{s['phone'][:3]}****{s['phone'][-4:]}"
-        markdown_text += f"{mask}\n\n"
         
         # 通话用量
         voice_used = s['voiceUsage']
         voice_total = s['voiceTotal']
-        markdown_text += f"通话:{voice_used}/{voice_total}分\n\n"
         
-        # 总流量
-        markdown_text += "总流量\n\n"
-        
-        # 通用流量（除以1024转换为GB）
-        common_used_mb = s['commonUse']
-        common_total_mb = s['commonTotal']
-        if common_total_mb > 0:
-            common_used_gb = common_used_mb / 1024
-            common_total_gb = common_total_mb / 1024
-            markdown_text += f"通用:{common_used_gb:.1f}/{common_total_gb:.1f}GB\n\n"
-        else:
-            markdown_text += f"通用:0/0.0GB\n\n"
-        
-        # 专用流量（除以1024转换为GB）
-        special_used_mb = s['specialUse']
-        special_total_mb = s['specialTotal']
-        if special_total_mb > 0:
-            special_used_gb = special_used_mb / 1024
-            special_total_gb = special_total_mb / 1024
-            markdown_text += f"专用:{special_used_gb:.1f}/{special_total_gb:.1f}GB\n\n"
-        else:
-            markdown_text += f"专用:0/0.0GB\n\n"
-        
-        # 流量包明细（每条换行）
-        if s.get('fluxDetail'):
-            markdown_text += "[流量包明细]\n\n"
-            # 将流量包明细按流量包类型分组
-            detail_lines = s['fluxDetail'].split('🇨🇳')
-            domestic_lines = []
-            special_lines = []
-            
-            for line in detail_lines:
-                if line.strip():
-                    if '📺专用流量' in line:
-                        # 提取专用流量部分
-                        special_part = line.split('📺专用流量:')[1].strip()
-                        # 拆分每个流量包
-                        packages = [p.strip() for p in special_part.split(']') if p.strip()]
-                        for pkg in packages:
-                            if pkg:
-                                special_lines.append(pkg + ']')
-                    elif line.strip():
-                        domestic_lines.append('🇨🇳' + line.strip())
-            
-            # 显示国内通用流量
-            if domestic_lines:
-                markdown_text += "国内通用流量\n\n"
-                for line in domestic_lines:
-                    # 处理每个流量包，确保换行
-                    if ':' in line:
-                        title_part = line.split(':')[0]
-                        packages_part = line.split(':')[1]
-                        markdown_text += f"{title_part}:\n"
-                        # 拆分每个流量包
-                        packages = [p.strip() for p in packages_part.split(']') if p.strip()]
-                        for pkg in packages:
-                            if pkg:
-                                markdown_text += f"{pkg}]\n"
-                    else:
-                        markdown_text += f"{line}\n"
-                markdown_text += "\n"
-            
-            # 显示专用流量
-            if special_lines:
-                markdown_text += "专用流量\n\n"
-                for line in special_lines:
-                    markdown_text += f"{line}\n"
-                markdown_text += "\n"
+        # 总流量（除以1024转换为GB）
+        common_used_gb = s['commonUse'] / 1024
+        common_total_gb = s['commonTotal'] / 1024
+        special_used_gb = s['specialUse'] / 1024
+        special_total_gb = s['specialTotal'] / 1024
         
         # 余额
         balance = s['balance'] / 100
-        markdown_text += f"余额:{balance:.2f}元\n\n"
         
-        markdown_text += "---\n\n"
+        usage_section += f"{mask}\n\n"
+        usage_section += f"通话:{voice_used}/{voice_total}分\n\n"
+        usage_section += "总流量\n\n"
+        usage_section += f"通用:{common_used_gb:.1f}/{common_total_gb:.1f}GB\n\n"
+        usage_section += f"专用:{special_used_gb:.1f}/{special_total_gb:.1f}GB\n\n"
+        
+        # 流量包明细
+        if s.get('fluxDetail'):
+            usage_section += "[流量包明细]\n\n"
+            
+            # 解析流量包明细
+            detail_text = s['fluxDetail']
+            
+            # 按流量类型分组
+            domestic_packages = []
+            special_packages = []
+            
+            if '🇨🇳' in detail_text:
+                parts = detail_text.split('🇨🇳')
+                for part in parts:
+                    if '📺专用流量' in part:
+                        # 提取专用流量
+                        special_part = part.split('📺专用流量:')[1].strip() if '📺专用流量:' in part else ''
+                        # 拆分每个流量包
+                        packages = [p.strip() + ']' for p in special_part.split(']') if p.strip()]
+                        special_packages.extend(packages)
+                    elif part.strip():
+                        # 通用流量
+                        domestic_part = part.strip()
+                        if ':' in domestic_part:
+                            title = domestic_part.split(':')[0]
+                            content = domestic_part.split(':')[1]
+                            packages = [p.strip() + ']' for p in content.split(']') if p.strip()]
+                            domestic_packages.append((title, packages))
+            
+            # 显示国内通用流量
+            if domestic_packages:
+                usage_section += "国内通用流量\n\n"
+                for title, packages in domestic_packages:
+                    usage_section += f"{title}:\n"
+                    for pkg in packages:
+                        usage_section += f"{pkg}\n"
+                    usage_section += "\n"
+            
+            # 显示专用流量
+            if special_packages:
+                usage_section += "专用流量\n\n"
+                for pkg in special_packages:
+                    usage_section += f"{pkg}\n"
+                usage_section += "\n"
+        
+        usage_section += f"余额:{balance:.2f}元\n\n"
+        usage_section += "---\n\n"
     
-    # 添加今日话费福利统计
-    markdown_text += "## 今日话费福利\n\n"
-    markdown_text += f"- 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元\n"
-    markdown_text += f"- 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元\n"
-    markdown_text += f"- 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元\n"
-    markdown_text += f"- **今日总计: {total_today:.1f}元**\n\n"
-    
-    # 添加本月累计统计
-    markdown_text += "## 本月累计话费福利\n\n"
-    markdown_text += f"- 金豆兑换: {total_exchange:.1f}元\n"
-    markdown_text += f"- 各种抽奖: {total_prize:.1f}元\n"
-    markdown_text += f"- 等级权益: {total_rights:.1f}元\n"
-    markdown_text += f"- **本月总计: {total_month:.1f}元**\n\n"
-    
-    # 添加本月中奖明细
-    markdown_text += "## 本月中奖明细\n\n"
-    if MONTH_WINNING_RECORDS:
-        for r in sorted(MONTH_WINNING_RECORDS, key=lambda x: x['time'])[:15]:
+    # 生成今日中奖记录
+    today_winning_section = ""
+    if TODAY_WINNING_RECORDS:
+        for r in sorted(TODAY_WINNING_RECORDS, key=lambda x: x['time']):
             mask = f"{r['phone'][:3]}****{r['phone'][-4:]}"
-            markdown_text += f"- {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
+            today_winning_section += f"• {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
     else:
-        markdown_text += "本月暂无中奖记录\n"
+        today_winning_section = "今日暂无中奖记录\n"
     
-    # 添加查询时间
-    markdown_text += f"\n查询时间:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+    # 生成本月中奖记录
+    month_winning_section = ""
+    if MONTH_WINNING_RECORDS:
+        for r in sorted(MONTH_WINNING_RECORDS, key=lambda x: x['time']):
+            mask = f"{r['phone'][:3]}****{r['phone'][-4:]}"
+            month_winning_section += f"• {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
+    else:
+        month_winning_section = "本月暂无中奖记录\n"
+    
+    # 组装完整的 Markdown 内容
+    markdown_text = f"""{usage_section}今日话费福利
+• 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元
+• 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元
+• 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元
+• **今日总计: {total_today:.1f}元**
+
+本月累计话费福利
+• 金豆兑换: {total_exchange:.1f}元
+• 各种抽奖: {total_prize:.1f}元
+• 等级权益: {total_rights:.1f}元
+• **本月总计: {total_month:.1f}元**
+
+本月中奖明细
+{month_winning_section}查询时间:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"""
     
     # 构建请求数据
     data = {
