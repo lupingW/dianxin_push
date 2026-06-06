@@ -691,8 +691,6 @@ async def send_dingtalk(usage_summaries: list):
         
         # 流量包明细
         if s.get('fluxDetail'):
-            usage_section += "# 流量包明细\n"
-            
             # 解析流量包明细
             detail_text = s['fluxDetail']
             
@@ -712,7 +710,7 @@ async def send_dingtalk(usage_summaries: list):
                         title = line[:title_end].replace('🇨🇳', '')
                         content = line[title_end + 1:].strip()
                         
-                        usage_section += f"### {title}：\n"
+                        usage_section += f"# {title}：\n"
                         
                         # 提取每个流量包完整信息 [包名]用量信息
                         # 使用正则匹配每个完整的流量包项
@@ -731,7 +729,7 @@ async def send_dingtalk(usage_summaries: list):
                         title = line[:title_end].replace('📺', '')
                         content = line[title_end + 1:].strip()
                         
-                        usage_section += f"### {title}：\n"
+                        usage_section += f"# {title}：\n"
                         
                         # 提取每个流量包完整信息 [包名]用量信息
                         import re
