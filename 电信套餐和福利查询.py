@@ -11,7 +11,7 @@
 """
 
 import os, sys, json, re, base64, random, ssl, calendar, logging, hmac, hashlib, time, urllib.parse
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from collections import defaultdict
 try:
     import aiohttp
@@ -683,9 +683,10 @@ async def send_dingtalk(usage_summaries: list):
         balance = s['balance'] / 100
         
         usage_section += f"{mask}\n\n"
-        usage_section += f"# 通话:{voice_used}/{voice_total}分\n"
         usage_section += f" --- \n"
-        usage_section += f"# 总流量：\n"
+        usage_section += f"# 通话：{voice_used}/{voice_total}分\n"
+        usage_section += f" --- \n"
+        usage_section += f"# 总流量\n"
         usage_section += f"* 通用：{common_used_gb:.1f}/{common_total_gb:.1f}GB\n"
         usage_section += f"* 专用：{special_used_gb:.1f}/{special_total_gb:.1f}GB\n"
         usage_section += f"* 总计：**{(common_used_gb + special_used_gb):.1f}/{(common_total_gb + special_total_gb):.1f}GB**\n"
@@ -711,7 +712,7 @@ async def send_dingtalk(usage_summaries: list):
                         title = line[:title_end].replace('🇨🇳', '')
                         content = line[title_end + 1:].strip()
                         
-                        usage_section += f"# {title}：\n"
+                        usage_section += f"# {title}\n"
                         
                         # 提取每个流量包完整信息 [包名]用量信息
                         # 使用正则匹配每个完整的流量包项
@@ -730,7 +731,7 @@ async def send_dingtalk(usage_summaries: list):
                         title = line[:title_end].replace('📺', '')
                         content = line[title_end + 1:].strip()
                         
-                        usage_section += f"# {title}：\n"
+                        usage_section += f"# {title}\n"
                         
                         # 提取每个流量包完整信息 [包名]用量信息
                         import re
@@ -741,7 +742,7 @@ async def send_dingtalk(usage_summaries: list):
                                 usage_section += f"* {pkg}\n"
                         usage_section += "\n"
     usage_section += f" --- \n"
-    usage_section += f"# 余额:{balance:.2f}元\n"
+    usage_section += f"# 余额：{balance:.2f}元\n"
     usage_section += f" --- \n"
     # 生成今日中奖记录
     today_winning_section = ""
@@ -779,7 +780,7 @@ async def send_dingtalk(usage_summaries: list):
     usage_section += f"* 等级权益: {total_rights:.1f}元\n"
     usage_section += f"* **本月总计: {total_month:.1f}元**\n"
     usage_section += f" --- \n"
-    usage_section += f"\n\n查询时间:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    usage_section += f"\n\n查询时间:{(datetime.now() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')}"
     
     # 构建请求数据
     data = {
