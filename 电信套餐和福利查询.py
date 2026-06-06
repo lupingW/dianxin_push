@@ -667,7 +667,7 @@ async def send_dingtalk(usage_summaries: list):
     # 生成套餐用量部分
     usage_section = ""
     for s in usage_summaries:
-        mask = f"{s['phone'][:3]}****{s['phone'][-4:]}"
+        mask = f"# 用户：**{s['phone'][:3]}****{s['phone'][-4:]}**"
         
         # 通话用量
         voice_used = s['voiceUsage']
