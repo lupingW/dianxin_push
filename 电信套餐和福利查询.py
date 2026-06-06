@@ -665,12 +665,12 @@ async def send_dingtalk(usage_summaries: list):
     total_today = TODAY_AMOUNT_INFO["exchange"] + TODAY_AMOUNT_INFO["prize"] + TODAY_AMOUNT_INFO["rights"]
     
     # 构建 Markdown 内容
-    markdown_text = f"# {current_year}年{current_month}月电信监控报告\n\n"
+    markdown_text = ""
     
     # 添加每个账号的套餐用量
     for s in usage_summaries:
         mask = f"{s['phone'][:3]}****{s['phone'][-4:]}"
-        markdown_text += f"## {mask}\n\n"
+        markdown_text += f"{mask}\n\n"
         
         # 通话用量
         voice_used = s['voiceUsage']
@@ -680,30 +680,71 @@ async def send_dingtalk(usage_summaries: list):
         # 总流量
         markdown_text += "总流量\n\n"
         
-        # 通用流量
+        # 通用流量（除以1024转换为GB）
         common_used_mb = s['commonUse']
         common_total_mb = s['commonTotal']
         if common_total_mb > 0:
             common_used_gb = common_used_mb / 1024
             common_total_gb = common_total_mb / 1024
-            markdown_text += f"通用:{common_used_gb:.2f}/{common_total_gb:.2f}GB\n\n"
+            markdown_text += f"通用:{common_used_gb:.1f}/{common_total_gb:.1f}GB\n\n"
         else:
             markdown_text += f"通用:0/0.0GB\n\n"
         
-        # 专用流量
+        # 专用流量（除以1024转换为GB）
         special_used_mb = s['specialUse']
         special_total_mb = s['specialTotal']
         if special_total_mb > 0:
             special_used_gb = special_used_mb / 1024
             special_total_gb = special_total_mb / 1024
-            markdown_text += f"专用:{special_used_gb:.2f}/{special_total_gb:.2f}GB\n\n"
+            markdown_text += f"专用:{special_used_gb:.1f}/{special_total_gb:.1f}GB\n\n"
         else:
             markdown_text += f"专用:0/0.0GB\n\n"
         
-        # 流量包明细
+        # 流量包明细（每条换行）
         if s.get('fluxDetail'):
             markdown_text += "[流量包明细]\n\n"
-            markdown_text += f"{s['fluxDetail']}\n\n"
+            # 将流量包明细按流量包类型分组
+            detail_lines = s['fluxDetail'].split('🇨🇳')
+            domestic_lines = []
+            special_lines = []
+            
+            for line in detail_lines:
+                if line.strip():
+                    if '📺专用流量' in line:
+                        # 提取专用流量部分
+                        special_part = line.split('📺专用流量:')[1].strip()
+                        # 拆分每个流量包
+                        packages = [p.strip() for p in special_part.split(']') if p.strip()]
+                        for pkg in packages:
+                            if pkg:
+                                special_lines.append(pkg + ']')
+                    elif line.strip():
+                        domestic_lines.append('🇨🇳' + line.strip())
+            
+            # 显示国内通用流量
+            if domestic_lines:
+                markdown_text += "国内通用流量\n\n"
+                for line in domestic_lines:
+                    # 处理每个流量包，确保换行
+                    if ':' in line:
+                        title_part = line.split(':')[0]
+                        packages_part = line.split(':')[1]
+                        markdown_text += f"{title_part}:\n"
+                        # 拆分每个流量包
+                        packages = [p.strip() for p in packages_part.split(']') if p.strip()]
+                        for pkg in packages:
+                            if pkg:
+                                markdown_text += f"{pkg}]\n"
+                    else:
+                        markdown_text += f"{line}\n"
+                markdown_text += "\n"
+            
+            # 显示专用流量
+            if special_lines:
+                markdown_text += "专用流量\n\n"
+                for line in special_lines:
+                    markdown_text += f"{line}\n"
+                markdown_text += "\n"
         
         # 余额
         balance = s['balance'] / 100
@@ -741,7 +782,7 @@ async def send_dingtalk(usage_summaries: list):
     data = {
         "msgtype": "markdown",
         "markdown": {
-            "title": f"{current_year}年{current_month}月电信报告",
+            "title": "电信监控报告",
             "text": markdown_text
         }
     }
