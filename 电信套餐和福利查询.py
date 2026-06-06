@@ -682,7 +682,7 @@ async def send_dingtalk(usage_summaries: list):
         # 余额
         balance = s['balance'] / 100
         
-        usage_section += f"{mask}"
+        usage_section += f"{mask}\n"
         usage_section += f"通话:{voice_used}/{voice_total}分\n"
         usage_section += f"# 总流量：\n"
         usage_section += f"* 通用：{common_used_gb:.1f}/{common_total_gb:.1f}GB\n"
@@ -691,7 +691,7 @@ async def send_dingtalk(usage_summaries: list):
         
         # 流量包明细
         if s.get('fluxDetail'):
-            usage_section += "# 流量包明细"
+            usage_section += "# 流量包明细\n"
             
             # 解析流量包明细
             detail_text = s['fluxDetail']
@@ -721,7 +721,7 @@ async def send_dingtalk(usage_summaries: list):
                         for pkg in packages:
                             pkg = pkg.strip()
                             if pkg:
-                                usage_section += f"* [{pkg}]\n"
+                                usage_section += f"* {pkg}\n"
                         usage_section += "\n"
                         
                 elif line.startswith('📺'):
@@ -739,7 +739,7 @@ async def send_dingtalk(usage_summaries: list):
                         for pkg in packages:
                             pkg = pkg.strip()
                             if pkg:
-                                usage_section += f"* [{pkg}]\n"
+                                usage_section += f"* {pkg}\n"
                         usage_section += "\n"
         
     usage_section += f"# 余额:{balance:.2f}元\n"
