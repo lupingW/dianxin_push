@@ -685,8 +685,8 @@ async def send_dingtalk(usage_summaries: list):
         usage_section += f"{mask}\n\n"
         usage_section += f"通话:{voice_used}/{voice_total}分\n\n"
         usage_section += "总流量\n\n"
-        usage_section += f"通用:{common_used_gb:.1f}/{common_total_gb:.1f}GB\n\n"
-        usage_section += f"专用:{special_used_gb:.1f}/{special_total_gb:.1f}GB\n\n"
+        usage_section += f"通用:{common_used_gb / 1024:.1f}/{common_total_gb / 1024:.1f}GB\n\n"
+        usage_section += f"专用:{special_used_gb / 1024:.1f}/{special_total_gb / 1024:.1f}GB\n\n"
         
         # 流量包明细
         if s.get('fluxDetail'):
@@ -695,43 +695,46 @@ async def send_dingtalk(usage_summaries: list):
             # 解析流量包明细
             detail_text = s['fluxDetail']
             
-            # 按流量类型分组
-            domestic_packages = []
-            special_packages = []
+            # 按行分割
+            lines = detail_text.split('\n')
             
-            if '🇨🇳' in detail_text:
-                parts = detail_text.split('🇨🇳')
-                for part in parts:
-                    if '📺专用流量' in part:
-                        # 提取专用流量
-                        special_part = part.split('📺专用流量:')[1].strip() if '📺专用流量:' in part else ''
-                        # 拆分每个流量包
-                        packages = [p.strip() + ']' for p in special_part.split(']') if p.strip()]
-                        special_packages.extend(packages)
-                    elif part.strip():
-                        # 通用流量
-                        domestic_part = part.strip()
-                        if ':' in domestic_part:
-                            title = domestic_part.split(':')[0]
-                            content = domestic_part.split(':')[1]
-                            packages = [p.strip() + ']' for p in content.split(']') if p.strip()]
-                            domestic_packages.append((title, packages))
-            
-            # 显示国内通用流量
-            if domestic_packages:
-                usage_section += "国内通用流量\n\n"
-                for title, packages in domestic_packages:
-                    usage_section += f"{title}:\n"
-                    for pkg in packages:
-                        usage_section += f"{pkg}\n"
-                    usage_section += "\n"
-            
-            # 显示专用流量
-            if special_packages:
-                usage_section += "专用流量\n\n"
-                for pkg in special_packages:
-                    usage_section += f"{pkg}\n"
-                usage_section += "\n"
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # 判断流量类型
+                if line.startswith('🇨🇳'):
+                    # 国内通用流量
+                    title_end = line.find(':')
+                    if title_end != -1:
+                        title = line[:title_end].replace('🇨🇳', '')
+                        content = line[title_end + 1:].strip()
+                        
+                        usage_section += f"国内通用流量\n\n"
+                        usage_section += f"{title}:\n"
+                        
+                        # 提取每个流量包 [包名]用量信息
+                        packages = re.findall(r'\[([^\]]+)\]', content)
+                        for pkg in packages:
+                            usage_section += f"[{pkg}]\n"
+                        usage_section += "\n"
+                        
+                elif line.startswith('📺'):
+                    # 专用流量
+                    title_end = line.find(':')
+                    if title_end != -1:
+                        title = line[:title_end].replace('📺', '')
+                        content = line[title_end + 1:].strip()
+                        
+                        usage_section += f"专用流量\n\n"
+                        usage_section += f"{title}:\n"
+                        
+                        # 提取每个流量包 [包名]用量信息
+                        packages = re.findall(r'\[([^\]]+)\]', content)
+                        for pkg in packages:
+                            usage_section += f"[{pkg}]\n"
+                        usage_section += "\n"
         
         usage_section += f"余额:{balance:.2f}元\n\n"
         usage_section += "---\n\n"
@@ -750,25 +753,26 @@ async def send_dingtalk(usage_summaries: list):
     if MONTH_WINNING_RECORDS:
         for r in sorted(MONTH_WINNING_RECORDS, key=lambda x: x['time']):
             mask = f"{r['phone'][:3]}****{r['phone'][-4:]}"
-            month_winning_section += f"• {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
+            month_winning_section += f"{r['time']} | {mask} | {r['amount']} | {r['type']}\n"
     else:
         month_winning_section = "本月暂无中奖记录\n"
     
     # 组装完整的 Markdown 内容
-    markdown_text = f"""{usage_section}今日话费福利
-• 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元
-• 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元
-• 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元
-• **今日总计: {total_today:.1f}元**
+    markdown_text = f"""{usage_section}今日话费福利\n
+金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元\n
+各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元\n
+等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元\n
+**今日总计: {total_today:.1f}元**\n
 
-本月累计话费福利
-• 金豆兑换: {total_exchange:.1f}元
-• 各种抽奖: {total_prize:.1f}元
-• 等级权益: {total_rights:.1f}元
-• **本月总计: {total_month:.1f}元**
+本月累计话费福利\n
+金豆兑换: {total_exchange:.1f}元\n
+各种抽奖: {total_prize:.1f}元\n
+等级权益: {total_rights:.1f}元\n
+**本月总计: {total_month:.1f}元**\n
 
-本月中奖明细
-{month_winning_section}查询时间:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"""
+本月中奖明细\n
+{month_winning_section}\n
+查询时间:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"""
     
     # 构建请求数据
     data = {
