@@ -674,10 +674,10 @@ async def send_dingtalk(usage_summaries: list):
         voice_total = s['voiceTotal']
         
         # 总流量（除以1024转换为GB）
-        common_used_gb = s['commonUse'] / 1024
-        common_total_gb = s['commonTotal'] / 1024
-        special_used_gb = s['specialUse'] / 1024
-        special_total_gb = s['specialTotal'] / 1024
+        common_used_gb = s['commonUse'] / 1024 / 1024
+        common_total_gb = s['commonTotal'] / 1024 / 1024
+        special_used_gb = s['specialUse'] / 1024 / 1024
+        special_total_gb = s['specialTotal'] / 1024 / 1024
         
         # 余额
         balance = s['balance'] / 100
@@ -685,9 +685,9 @@ async def send_dingtalk(usage_summaries: list):
         usage_section += f"{mask}"
         usage_section += f"通话:{voice_used}/{voice_total}分\n"
         usage_section += f"# 总流量：\n"
-        usage_section += f"* 通用：{common_used_gb / 1024:.1f}/{common_total_gb / 1024:.1f}GB\n"
-        usage_section += f"* 专用：{special_used_gb / 1024:.1f}/{special_total_gb / 1024:.1f}GB\n"
-        usage_section += f"* 总计：**{(common_used_gb + special_used_gb) / 1024:.1f}/{(common_total_gb + special_total_gb) / 1024:.1f}GB**\n"
+        usage_section += f"* 通用：{common_used_gb:.1f}/{common_total_gb:.1f}GB\n"
+        usage_section += f"* 专用：{special_used_gb:.1f}/{special_total_gb:.1f}GB\n"
+        usage_section += f"* 总计：**{(common_used_gb + special_used_gb):.1f}/{(common_total_gb + special_total_gb):.1f}GB**\n"
         
         # 流量包明细
         if s.get('fluxDetail'):
