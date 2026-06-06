@@ -675,7 +675,7 @@ async def send_dingtalk(usage_summaries: list):
         # 通话用量
         voice_used = s['voiceUsage']
         voice_total = s['voiceTotal']
-        markdown_text += f"通话:{voice_used}/{voice_total}min\n\n"
+        markdown_text += f"通话:{voice_used}/{voice_total}分\n\n"
         
         # 总流量
         markdown_text += "总流量\n\n"
@@ -966,7 +966,7 @@ async def main():
                 await asyncio.sleep(wait)
 
         print("\n📊 生成综合报告...")
-        html = generate_html_report(usage_summaries)
+        # html = generate_html_report(usage_summaries)
         await send_dingtalk(usage_summaries)
         qinglong_notify()
 
