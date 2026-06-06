@@ -682,12 +682,12 @@ async def send_dingtalk(usage_summaries: list):
         # 余额
         balance = s['balance'] / 100
         
-        usage_section += f"{mask}\n\n"
-        usage_section += f"通话:{voice_used}/{voice_total}分\n\n"
-        usage_section += f"# 总流量："
-        usage_section += f"* 通用：{common_used_gb / 1024:.1f}/{common_total_gb / 1024:.1f}GB"
-        usage_section += f"* 专用：{special_used_gb / 1024:.1f}/{special_total_gb / 1024:.1f}GB"
-        usage_section += f"* 总计：**{(common_used_gb + special_used_gb) / 1024:.1f}/{(common_total_gb + special_total_gb) / 1024:.1f}GB**"
+        usage_section += f"{mask}"
+        usage_section += f"通话:{voice_used}/{voice_total}分\n"
+        usage_section += f"# 总流量：\n"
+        usage_section += f"* 通用：{common_used_gb / 1024:.1f}/{common_total_gb / 1024:.1f}GB\n"
+        usage_section += f"* 专用：{special_used_gb / 1024:.1f}/{special_total_gb / 1024:.1f}GB\n"
+        usage_section += f"* 总计：**{(common_used_gb + special_used_gb) / 1024:.1f}/{(common_total_gb + special_total_gb) / 1024:.1f}GB**\n"
         
         # 流量包明细
         if s.get('fluxDetail'):
@@ -712,7 +712,7 @@ async def send_dingtalk(usage_summaries: list):
                         title = line[:title_end].replace('🇨🇳', '')
                         content = line[title_end + 1:].strip()
                         
-                        usage_section += f"### {title}："
+                        usage_section += f"### {title}：\n"
                         
                         # 提取每个流量包完整信息 [包名]用量信息
                         # 使用正则匹配每个完整的流量包项
@@ -721,7 +721,7 @@ async def send_dingtalk(usage_summaries: list):
                         for pkg in packages:
                             pkg = pkg.strip()
                             if pkg:
-                                usage_section += f"* [{pkg}]"
+                                usage_section += f"* [{pkg}]\n"
                         usage_section += "\n"
                         
                 elif line.startswith('📺'):
@@ -731,7 +731,7 @@ async def send_dingtalk(usage_summaries: list):
                         title = line[:title_end].replace('📺', '')
                         content = line[title_end + 1:].strip()
                         
-                        usage_section += f"### {title}："
+                        usage_section += f"### {title}：\n"
                         
                         # 提取每个流量包完整信息 [包名]用量信息
                         import re
@@ -739,21 +739,21 @@ async def send_dingtalk(usage_summaries: list):
                         for pkg in packages:
                             pkg = pkg.strip()
                             if pkg:
-                                usage_section += f"* [{pkg}]"
+                                usage_section += f"* [{pkg}]\n"
                         usage_section += "\n"
         
-    usage_section += f"# 余额:{balance:.2f}元"
+    usage_section += f"# 余额:{balance:.2f}元\n"
     
     # 生成今日中奖记录
     today_winning_section = ""
     if TODAY_WINNING_RECORDS:
         for r in sorted(TODAY_WINNING_RECORDS, key=lambda x: x['time']):
             mask = f"{r['phone'][:3]}****{r['phone'][-4:]}"
-            today_winning_section += f"* {r['time']} | {mask} | {r['amount']} | {r['type']}"
+            today_winning_section += f"* {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
     else:
-        today_winning_section = "* 今日暂无中奖记录"
+        today_winning_section = "* 今日暂无中奖记录\n"
 
-    usage_section += f"# 今日中奖明细"    
+    usage_section += f"# 今日中奖明细\n"    
     usage_section += today_winning_section
 
     # 生成本月中奖记录
@@ -763,23 +763,23 @@ async def send_dingtalk(usage_summaries: list):
             mask = f"{r['phone'][:3]}****{r['phone'][-4:]}"
             month_winning_section += f"* {r['time']} | {mask} | {r['amount']} | {r['type']}\n"
     else:
-        month_winning_section = "* 本月暂无中奖记录"
+        month_winning_section = "* 本月暂无中奖记录\n"
 
-    usage_section += f"# 本月中奖明细"    
+    usage_section += f"# 本月中奖明细\n"    
     usage_section += month_winning_section    
 
-    usage_section += f"# 今日话费福利"
-    usage_section += f"* 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元"
-    usage_section += f"* 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元"
-    usage_section += f"* 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元"
-    usage_section += f"* **今日总计: {total_today:.1f}元**"
+    usage_section += f"# 今日话费福利\n"
+    usage_section += f"* 金豆兑换: {TODAY_AMOUNT_INFO['exchange']:.1f}元\n"
+    usage_section += f"* 各种抽奖: {TODAY_AMOUNT_INFO['prize']:.1f}元\n"
+    usage_section += f"* 等级权益: {TODAY_AMOUNT_INFO['rights']:.1f}元\n"
+    usage_section += f"* **今日总计: {total_today:.1f}元**\n"
 
-    usage_section += f"# 本月累计话费福利"
-    usage_section += f"* 金豆兑换: {total_exchange:.1f}元"
-    usage_section += f"* 各种抽奖: {total_prize:.1f}元"
-    usage_section += f"* 等级权益: {total_rights:.1f}元"
-    usage_section += f"* **本月总计: {total_month:.1f}元**"
-    
+    usage_section += f"# 本月累计话费福利\n"
+    usage_section += f"* 金豆兑换: {total_exchange:.1f}元\n"
+    usage_section += f"* 各种抽奖: {total_prize:.1f}元\n"
+    usage_section += f"* 等级权益: {total_rights:.1f}元\n"
+    usage_section += f"* **本月总计: {total_month:.1f}元**\n"
+
     usage_section += f"\n\n查询时间:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     
     # 构建请求数据
