@@ -787,7 +787,7 @@ async def send_dingtalk(usage_summaries: list):
         "msgtype": "markdown",
         "markdown": {
             "title": "电信监控报告",
-            "text": markdown_text
+            "text": usage_section
         }
     }
     
