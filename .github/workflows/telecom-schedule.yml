@@ -2,7 +2,11 @@ name: 电信套餐和福利查询
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # 每天9:00运行 (UTC时间)
+    - cron: '0 1 * * *'  # 每天9:00运行 (北京时间9:00 = UTC时间1:00)
+  push:  # 代码push时自动运行
+    branches:
+      - main
+      - master
   workflow_dispatch:  # 允许手动触发
 
 jobs:
